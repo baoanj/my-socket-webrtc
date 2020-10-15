@@ -1,0 +1,15 @@
+{
+  "name": "my-socket-webrtc",
+  "version": "1.0.0",
+  "description": "socket.io & WebRTC",
+  "main": "index.js",
+  "scripts": {
+    "start": "set PORT=3030&&node index.js"
+  },
+  "author": "baoanj",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0"
+  }
+}
