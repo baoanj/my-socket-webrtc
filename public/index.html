@@ -1,6 +1,5 @@
 <!doctype html>
 <html lang="zh-cn">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,71 +8,26 @@
     * {
       box-sizing: border-box;
     }
-
     body {
       margin: 0;
       padding: 2vw;
-      font-size: 16px;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
     }
-
-    .talk {
-      flex-shrink: 0;
-      margin-bottom: 10px;
+    button {
+      width: 100%;
     }
-
-    .talk video {
+    video {
       width: 50%;
       float: left;
     }
-
-    .whiteboard {
-      flex: 1;
-    }
-
-    #draw {
-      border: 1px solid #ccc;
-    }
-
-    .chat {
-      flex: 1;
-      min-height: 100px;
-      overflow: auto;
-    }
-
-    .bar {
-      flex-shrink: 0;
-    }
-
-    #msg {
-      width: calc(100% - 50px);
-      border: 1px solid #666;
-      border-radius: 2px;
-      outline: 0;
-      line-height: 1.6;
-      font-size: inherit;
-    }
   </style>
 </head>
-
 <body>
   <button onclick="startVideoTalk()">视频通话</button>
-  <div class="talk">
+  <div>
     <video id="local-video" autoplay muted></video>
     <video id="remote-video" autoplay></video>
-  </div>
-  <div class="whiteboard">
-    <canvas id="draw"></canvas>
-  </div>
-  <ul class="chat"></ul>
-  <div class="bar">
-    <input id="msg" type="text">
-    <button id="send">发送</button>
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/main.js"></script>
 </body>
-
 </html>
