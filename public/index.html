@@ -47,6 +47,15 @@
       flex-shrink: 0;
     }
 
+    #room {
+      width: calc(100% - 130px);
+      border: 1px solid #666;
+      border-radius: 2px;
+      outline: 0;
+      line-height: 1.6;
+      font-size: inherit;
+    }
+
     #msg {
       width: calc(100% - 50px);
       border: 1px solid #666;
@@ -59,10 +68,13 @@
 </head>
 
 <body>
-  <button onclick="startVideoTalk()">视频通话</button>
+  <div class="bar">
+    <input id="room" type="text">
+    <button id="join">加入</button>
+    <span id="count"></span>人在线
+  </div>
   <div class="talk">
     <video id="local-video" autoplay muted></video>
-    <video id="remote-video" autoplay></video>
   </div>
   <div class="whiteboard">
     <canvas id="draw"></canvas>

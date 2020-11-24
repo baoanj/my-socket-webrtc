@@ -116,79 +116,112 @@ function onSendMsg() {
 
 /************************** video **************************/
 
-const localVideo = document.getElementById('local-video')
-const remoteVideo = document.getElementById('remote-video')
-let pc, receive
+const room = document.querySelector('#room')
+const join = document.querySelector('#join')
+const count = document.querySelector('#count')
+const localVideo = document.querySelector('#local-video')
+const talk = document.querySelector('.talk')
 
-async function startVideoTalk() {
-  createPeerConnection()
-  const stream = await navigator.mediaDevices.getUserMedia({
+const iceConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun.xten.com' },
+    { urls: 'stun:stun.ekiga.net' }
+  ]
+}
+
+let id, stream, pc = {}, user = []
+
+join.addEventListener('click', onJoinRoom, false)
+
+function onJoinRoom() {
+  socket.emit('join', room.value)
+}
+
+socket.on('join', onJoinEvent)
+
+async function onJoinEvent(data) {
+  await startLocalVideo()
+  id = data.id
+  data.user.forEach(item => {
+    createPeerConnection(item, true)
+  })
+}
+
+socket.on('user', onUserEvent)
+
+function onUserEvent(data) {
+  count.textContent = data.length
+  user.forEach(item => {
+    const video = document.getElementById(item)
+    if (!data.includes(item) && video) talk.removeChild(video)
+  })
+  user = data
+}
+
+async function startLocalVideo() {
+  stream = await navigator.mediaDevices.getUserMedia({
     video: true,
     audio: true
   })
   localVideo.srcObject = stream
-  stream.getTracks().forEach(track => pc.addTrack(track, stream))
 }
 
-function createPeerConnection() {
-  const iceConfig = {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun.xten.com' },
-      { urls: 'stun:stun.ekiga.net' }
-    ]
+function createPeerConnection(key, send) {
+  pc[key] = new RTCPeerConnection(iceConfig)
+  if (send)
+    pc[key].onnegotiationneeded = async () => {
+      const offer = await pc[key].createOffer()
+      await pc[key].setLocalDescription(offer)
+      socket.emit('offer', key, { from: id, offer })
+    }
+  pc[key].onicecandidate = evt => {
+    if (evt.candidate)
+      socket.emit('candidate', key, { from: id, candidate: evt.candidate })
   }
-  pc = new RTCPeerConnection(iceConfig)
-  pc.onnegotiationneeded = onnegotiationneeded
-  pc.onicecandidate = onicecandidate
-  pc.ontrack = ontrack
-}
-
-async function onnegotiationneeded() {
-  if (receive) return
-  const offer = await pc.createOffer()
-  await pc.setLocalDescription(offer)
-  socket.emit('offer', offer)
-}
-
-function onicecandidate(evt) {
-  if (evt.candidate) socket.emit('candidate', evt.candidate)
-}
-
-function ontrack(evt) {
-  remoteVideo.srcObject = evt.streams[0]
+  pc[key].ontrack = evt => {
+    if (!document.getElementById(key)) {
+      const remoteVideo = document.createElement('video')
+      remoteVideo.id = key
+      remoteVideo.autoplay = true
+      remoteVideo.srcObject = evt.streams[0]
+      talk.appendChild(remoteVideo)
+    } else {
+      document.getElementById(key).srcObject = evt.streams[0]
+    }
+  }
+  stream.getTracks().forEach(track => pc[key].addTrack(track, stream))
 }
 
 socket.on('offer', handleReceiveOffer)
 
-async function handleReceiveOffer(offer) {
-  receive = true
-  await startVideoTalk()
+async function handleReceiveOffer({ from, offer }) {
+  createPeerConnection(from)
 
   const remoteDescription = new RTCSessionDescription(offer)
-  await pc.setRemoteDescription(remoteDescription)
+  await pc[from].setRemoteDescription(remoteDescription)
 
-  const answer = await pc.createAnswer()
-  await pc.setLocalDescription(answer)
-  socket.emit('answer', answer)
+  const answer = await pc[from].createAnswer()
+  await pc[from].setLocalDescription(answer)
+  socket.emit('answer', from, { from: id, answer })
 }
 
 socket.on('answer', handleReceiveAnswer)
 
-async function handleReceiveAnswer(answer) {
+async function handleReceiveAnswer({ from, answer }) {
   const remoteDescription = new RTCSessionDescription(answer)
-  await pc.setRemoteDescription(remoteDescription)
+  await pc[from].setRemoteDescription(remoteDescription)
 }
 
 socket.on('candidate', handleReceiveCandidate)
 
-async function handleReceiveCandidate(candidate, n = 10) {
+async function handleReceiveCandidate({ from, candidate }, n = 10) {
   if (n === 0) return
-  if (!pc || !pc.remoteDescription.type) {
+  if (!pc[from] || !pc[from].remoteDescription.type) {
     setTimeout(() => {
-      handleReceiveCandidate(candidate, n - 1)
+      handleReceiveCandidate({ from, candidate }, n - 1)
     }, 500)
     return
   }
-  await pc.addIceCandidate(new RTCIceCandidate(candidate))
+  await pc[from].addIceCandidate(new RTCIceCandidate(candidate))
 }
